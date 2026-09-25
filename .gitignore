@@ -1,0 +1,14 @@
+node_modules/
+dist/
+release/
+**/target/
+src-tauri/vendor/**/Cargo.lock
+.env
+.env.*
+!.env.example
+*.log
+*.pdb
+*.netbond-*.part
+*.netbond-*.json
+.DS_Store
+Thumbs.db

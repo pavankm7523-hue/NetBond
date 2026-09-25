@@ -1,0 +1,39 @@
+name: Bug report
+description: Report a reproducible NetBond problem
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not post private URLs, magnet links, credentials, or IP addresses.
+  - type: input
+    id: version
+    attributes:
+      label: NetBond version
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+    validations:
+      required: true
+  - type: textarea
+    id: adapters
+    attributes:
+      label: Network adapters
+      description: List adapter types and whether each had independent Internet access.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true

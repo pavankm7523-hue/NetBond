@@ -1,0 +1,26 @@
+{
+  "name": "netbond",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "icons": "node scripts/make-icons.mjs",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.8.0",
+    "@tauri-apps/plugin-dialog": "^2.4.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.8.0",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.35.4",
+    "typescript": "^5.8.3",
+    "vite": "^7.1.0"
+  }
+}
