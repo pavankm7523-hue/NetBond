@@ -11,7 +11,7 @@ No administrator account or network driver is required.
 ## Recommended setup
 
 1. Open the [latest release](https://github.com/pavankm7523-hue/NetBond/releases/latest).
-2. Download `NetBond_0.1.1_x64-setup.exe`.
+2. Download `NetBond_0.1.2_x64-setup.exe`.
 3. Double-click it and finish the per-user installation.
 4. Launch **NetBond** from the Start menu.
 
@@ -19,7 +19,7 @@ The current build is not code-signed, so Windows SmartScreen may show **Windows 
 
 ## MSI or portable options
 
-- For MSI, download `NetBond_0.1.1_x64_en-US.msi` and follow Windows Installer.
+- For MSI, download `NetBond_0.1.2_x64_en-US.msi` and follow Windows Installer.
 - For portable use, download `NetBond.exe`, move it to a permanent folder, and run it directly.
 
 ## Verify the download
@@ -27,7 +27,7 @@ The current build is not code-signed, so Windows SmartScreen may show **Windows 
 Download `SHA256SUMS.txt`, open PowerShell in your Downloads folder, and run:
 
 ```powershell
-Get-FileHash .\NetBond_0.1.1_x64-setup.exe -Algorithm SHA256
+Get-FileHash .\NetBond_0.1.2_x64-setup.exe -Algorithm SHA256
 Get-Content .\SHA256SUMS.txt
 ```
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2 — 2026-09-26
+
+- Ignore stale Windows hidden-adapter indexes instead of aborting network discovery.
+
 ## 0.1.1 — 2026-09-26
 
 - Allow `.torrent` and magnet metadata review before selecting a download adapter.

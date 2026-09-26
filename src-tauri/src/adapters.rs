@@ -32,9 +32,21 @@ pub fn enumerate() -> Result<Vec<AdapterInfo>, String> {
         let script = r#"
 $ErrorActionPreference='Stop'
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$ipByIndex = @{}
+# Query valid IP configurations once. Calling Get-NetIPConfiguration for each
+# hidden adapter can fail when Windows keeps a stale adapter whose ifIndex no
+# longer exists in MSFT_NetIPInterface (common after USB tether/VPN removal).
+try {
+  @(Get-NetIPConfiguration -ErrorAction SilentlyContinue) | ForEach-Object {
+    $ipByIndex[[uint32]$_.InterfaceIndex] = $_
+  }
+} catch {
+  # Adapter discovery remains useful even if Windows cannot currently provide
+  # address details. Such adapters are returned without IPs and are not usable.
+}
 $items = @(Get-NetAdapter -IncludeHidden | Where-Object { $_.InterfaceDescription -notmatch 'Loopback' } | ForEach-Object {
   $a = $_
-  $ip = Get-NetIPConfiguration -InterfaceIndex $a.ifIndex -ErrorAction SilentlyContinue
+  $ip = $ipByIndex[[uint32]$a.ifIndex]
   [PSCustomObject]@{
     Id = $a.InterfaceGuid.ToString()
     Name = $a.Name
@@ -42,9 +54,9 @@ $items = @(Get-NetAdapter -IncludeHidden | Where-Object { $_.InterfaceDescriptio
     Status = $a.Status.ToString()
     InterfaceIndex = [uint32]$a.ifIndex
     LinkSpeedBps = [uint64]$a.TransmitLinkSpeed
-    Ipv4 = @($ip.IPv4Address | ForEach-Object { $_.IPAddress })
-    Ipv6 = @($ip.IPv6Address | ForEach-Object { $_.IPAddress })
-    Gateways = @($ip.IPv4DefaultGateway,$ip.IPv6DefaultGateway | Where-Object { $_ } | ForEach-Object { $_.NextHop })
+    Ipv4 = @($ip.IPv4Address | Where-Object { $_ -and $_.IPAddress } | ForEach-Object { $_.IPAddress })
+    Ipv6 = @($ip.IPv6Address | Where-Object { $_ -and $_.IPAddress } | ForEach-Object { $_.IPAddress })
+    Gateways = @($ip.IPv4DefaultGateway,$ip.IPv6DefaultGateway | Where-Object { $_ -and $_.NextHop } | ForEach-Object { $_.NextHop })
   }
 })
 ConvertTo-Json -InputObject $items -Compress -Depth 5
