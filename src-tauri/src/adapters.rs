@@ -44,7 +44,16 @@ try {
   # Adapter discovery remains useful even if Windows cannot currently provide
   # address details. Such adapters are returned without IPs and are not usable.
 }
-$items = @(Get-NetAdapter -IncludeHidden | Where-Object { $_.InterfaceDescription -notmatch 'Loopback' } | ForEach-Object {
+$items = @(Get-NetAdapter -IncludeHidden | Where-Object {
+  # Windows exposes WAN miniports, tunnels, hotspot internals, kernel-debug
+  # devices and other hidden plumbing as adapters. They cannot provide an
+  # independent source route for NetBond, so only keep physical NICs plus
+  # explicit USB/cellular tether devices.
+  $_.Status -ne 'Not Present' -and (
+    $_.HardwareInterface -eq $true -or
+    $_.InterfaceDescription -match '(?i)Remote NDIS|RNDIS|USB.*(Ethernet|Network)|Mobile Broadband|Cellular|WWAN'
+  )
+} | ForEach-Object {
   $a = $_
   $ip = $ipByIndex[[uint32]$a.ifIndex]
   [PSCustomObject]@{

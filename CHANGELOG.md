@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3 — 2026-09-26
+
+- Hide Windows tunnel, WAN miniport, hotspot-internal, kernel-debug, and other ghost interfaces from the Network dashboard.
+
 ## 0.1.2 — 2026-09-26
 
 - Ignore stale Windows hidden-adapter indexes instead of aborting network discovery.
