@@ -922,6 +922,15 @@ label,
   color: #6b7280;
   white-space: nowrap;
 }
+.torrent-save-confirmation {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid #fed7bd;
+  border-radius: 7px;
+  background: #fff8f3;
+  color: #4d5259;
+  overflow-wrap: anywhere;
+}
 .torrent-interface-stats {
   display: flex;
   flex-wrap: wrap;

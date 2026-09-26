@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.6 — 2026-09-26
+
+- Add a native folder chooser for torrent downloads before metadata review and download start.
+- Clearly confirm the selected destination in the torrent metadata panel.
+
 ## 0.1.5 — 2026-09-26
 
 - Make torrent percentage and progress prominent and add expandable per-file progress.

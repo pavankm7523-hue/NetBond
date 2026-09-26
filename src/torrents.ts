@@ -62,16 +62,19 @@ export function setupTorrents(getAdapters: () => Adapter[], getFolder: () => str
     <div class="panel settings"><h2>Add a torrent</h2><p class="muted">Choose a .torrent file or paste a magnet URI. Review its files before downloading.</p>
     <label>Torrent source<input id="torrent-source" placeholder="magnet:?xt=urn:btih:…" spellcheck="false"></label>
     <div class="save-row"><button id="torrent-browse" class="secondary">Open .torrent file</button><button id="torrent-preview" class="primary">Review files</button></div>
+    <div class="save-row"><label>Save downloaded files to<input id="torrent-destination" readonly></label><button id="torrent-destination-browse" class="secondary">Choose folder</button></div>
     <p class="footnote">Torrent peer connections are spread across all selected adapters. Every peer socket is bound to its assigned Windows interface, and actual peer payload is reported per adapter.</p>
     <div id="torrent-metadata"></div><p id="torrent-error" class="form-error" role="alert"></p></div>
     <div class="section-head"><h2>Torrent queue</h2></div><div id="torrent-list" class="download-list"></div></section>`,
   );
   const source = document.querySelector<HTMLInputElement>("#torrent-source")!;
+  const destination = document.querySelector<HTMLInputElement>("#torrent-destination")!;
   const error = document.querySelector<HTMLElement>("#torrent-error")!;
   const metadata = document.querySelector<HTMLElement>("#torrent-metadata")!;
   let previewSource = "";
   let previewFolder = "";
   let previewAdapters: { id: string; name: string; local_ip: string }[] = [];
+  destination.value = getFolder();
   source.addEventListener("input", () => {
     metadata.innerHTML = "";
   });
@@ -89,6 +92,18 @@ export function setupTorrents(getAdapters: () => Adapter[], getFolder: () => str
       error.textContent = String(e);
     }
   });
+  document.querySelector("#torrent-destination-browse")!.addEventListener("click", async () => {
+    try {
+      const folder = await open({ directory: true, multiple: false, defaultPath: destination.value });
+      if (typeof folder === "string") {
+        destination.value = folder;
+        metadata.innerHTML = "";
+        error.textContent = "";
+      }
+    } catch (e) {
+      error.textContent = String(e);
+    }
+  });
   document
     .querySelector<HTMLButtonElement>("#torrent-preview")!
     .addEventListener("click", async (e) => {
@@ -98,7 +113,7 @@ export function setupTorrents(getAdapters: () => Adapter[], getFolder: () => str
       metadata.innerHTML = "";
       try {
         previewSource = source.value.trim();
-        previewFolder = getFolder();
+        previewFolder = destination.value.trim() || getFolder();
         previewAdapters = getAdapters().map((a) => ({
           id: a.id,
           name: a.name,
@@ -113,7 +128,7 @@ export function setupTorrents(getAdapters: () => Adapter[], getFolder: () => str
         <div class="torrent-files">${p.files.map((f) => `<label class="check"><input type="checkbox" data-torrent-file="${f.index}" ${f.selected ? "checked" : ""}><span>${escape(f.path)}</span><small>${size(f.size)}</small></label>`).join("")}</div>
         <div class="settings-grid"><label>Upload limit (KiB/s, 0 = unlimited)<input id="torrent-upload" type="number" value="256" min="0" max="1000000"></label><label>Maximum peers<input id="torrent-peers" type="number" value="80" min="1" max="500"></label></div>
         <label class="check"><input id="torrent-seed" type="checkbox"> Continue seeding after download completes</label>
-        <p class="muted">${escape(p.binding_mode)}</p><p class="muted">Save to ${escape(previewFolder)}</p><button id="torrent-start" class="primary">Download selected files</button>`;
+        <p class="muted">${escape(p.binding_mode)}</p><p class="torrent-save-confirmation"><b>Save to:</b> ${escape(previewFolder)}</p><button id="torrent-start" class="primary">Download selected files</button>`;
         document.querySelector("#torrent-start")!.addEventListener("click", async (event) => {
           const start = event.currentTarget as HTMLButtonElement;
           start.disabled = true;

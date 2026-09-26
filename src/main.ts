@@ -269,6 +269,8 @@ async function init() {
         start_minimized: false,
       };
       destinationInput().value = state.settings.download_directory;
+      document.querySelector<HTMLInputElement>("#torrent-destination")!.value =
+        state.settings.download_directory;
       const form = $("#settings-form") as HTMLFormElement;
       Object.entries(state.settings).forEach(([k, v]) => {
         const input = form.elements.namedItem(k) as HTMLInputElement;
@@ -280,6 +282,8 @@ async function init() {
     }
     state.settings = await invoke<Settings>("get_settings");
     destinationInput().value = state.settings.download_directory;
+    document.querySelector<HTMLInputElement>("#torrent-destination")!.value =
+      state.settings.download_directory;
     const form = $("#settings-form") as HTMLFormElement;
     Object.entries(state.settings).forEach(([k, v]) => {
       const input = form.elements.namedItem(k) as HTMLInputElement;

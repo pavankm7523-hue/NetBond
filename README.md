@@ -12,8 +12,8 @@ NetBond is a modern Windows 11 download manager that can use multiple selected n
 
 Get the latest version from [GitHub Releases](https://github.com/pavankm7523-hue/NetBond/releases/latest):
 
-- `NetBond_0.1.5_x64-setup.exe` — recommended per-user Windows installer
-- `NetBond_0.1.5_x64_en-US.msi` — MSI installer
+- `NetBond_0.1.6_x64-setup.exe` — recommended per-user Windows installer
+- `NetBond_0.1.6_x64_en-US.msi` — MSI installer
 - `NetBond.exe` — portable build; no installation required
 - `SHA256SUMS.txt` — checksums for verifying downloads
 

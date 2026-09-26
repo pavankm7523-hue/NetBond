@@ -1,6 +1,6 @@
 [package]
 name = "netbond"
-version = "0.1.5"
+version = "0.1.6"
 description = "Multi-interface HTTP and BitTorrent download manager for Windows"
 authors = ["pavankm7523-hue"]
 license = "MIT"
