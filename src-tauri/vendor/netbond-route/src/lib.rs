@@ -46,6 +46,23 @@ fn peer_routes() -> &'static Mutex<HashMap<SocketAddr, IpAddr>> {
     ROUTES.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+fn selected_sources() -> &'static Mutex<Option<Vec<IpAddr>>> {
+    static SOURCES: OnceLock<Mutex<Option<Vec<IpAddr>>>> = OnceLock::new();
+    SOURCES.get_or_init(|| Mutex::new(None))
+}
+
+/// Replace the live source pool used for new torrent peer connections.
+/// Existing sockets remain on their original interfaces.
+pub fn set_selected_sources(sources: Vec<IpAddr>) {
+    if let Ok(mut selected) = selected_sources().lock() {
+        *selected = Some(sources);
+    }
+}
+
+pub fn current_selected_sources() -> Option<Vec<IpAddr>> {
+    selected_sources().lock().ok()?.clone()
+}
+
 pub fn record_peer(peer: SocketAddr, source: IpAddr) {
     if let Ok(mut routes) = peer_routes().lock() {
         routes.insert(peer, source);

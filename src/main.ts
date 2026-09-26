@@ -85,6 +85,19 @@ function adapterIcon(kind: Adapter["kind"]) {
   return kind === "Wi-Fi" ? "⌁" : kind === "USB tether" || kind === "Mobile" ? "▣" : "⇄";
 }
 
+function selectedAdapterRequests() {
+  return state.adapters
+    .filter((adapter) => state.selected.has(adapter.id) && adapter.connected && adapter.ipv4.length)
+    .map((adapter) => ({ id: adapter.id, name: adapter.name, local_ip: adapter.ipv4[0] }));
+}
+
+function syncTorrentAdapters() {
+  if (!isTauri) return;
+  void invoke("update_torrent_adapters", { adapters: selectedAdapterRequests() }).catch((error) =>
+    showError(`Could not update torrent adapters: ${error}`),
+  );
+}
+
 function renderAdapters() {
   const usable = state.adapters.filter((a) => a.connected && a.ipv4.length);
   $("#adapter-pills").innerHTML = usable.length
@@ -134,6 +147,7 @@ function renderAdapters() {
       const id = el.dataset.adapter!;
       state.selected.has(id) ? state.selected.delete(id) : state.selected.add(id);
       renderAdapters();
+      syncTorrentAdapters();
     }),
   );
 }
@@ -234,6 +248,7 @@ async function refreshAdapters() {
         .forEach((a) => state.selected.add(a.id));
     state.adapters = fresh;
     renderAdapters();
+    syncTorrentAdapters();
   } catch (e) {
     showError(`Could not read network adapters: ${e}`);
   } finally {

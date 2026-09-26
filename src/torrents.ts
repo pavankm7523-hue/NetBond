@@ -16,6 +16,7 @@ export type TorrentSnapshot = {
   progress: number;
   peers: number;
   seeds: number | null;
+  files: { index: number; path: string; size: number; downloaded: number; selected: boolean }[];
   primary_adapter_name: string;
   interface_download_bytes: Record<string, number>;
   interface_upload_bytes: Record<string, number>;
@@ -188,21 +189,36 @@ export function renderTorrents() {
     ? Array.from(torrents.values())
         .map((t) => {
           const adapters = currentAdapters();
+          const interfaceTotal = Object.values(t.interface_download_bytes).reduce(
+            (total, bytes) => total + bytes,
+            0,
+          );
           const perInterface = Object.entries(t.interface_download_speeds)
             .map(([id, speed]) => {
               const adapter = adapters.find((a) => a.id === id);
-              return `<span><b>${escape(adapter?.name || id)}</b> ↓ ${size(speed)}/s · ${size(t.interface_download_bytes[id] || 0)}</span>`;
+              const bytes = t.interface_download_bytes[id] || 0;
+              const share = interfaceTotal ? (bytes / interfaceTotal) * 100 : 0;
+              return `<div><strong>${escape(adapter?.name || id)}</strong><span>${size(bytes)} downloaded</span><span>${share.toFixed(1)}% contribution</span><b>↓ ${size(speed)}/s</b></div>`;
             })
             .join("");
-          return `<article class="download-card">
-    <div class="download-top"><h3>${escape(t.name)}</h3><span>${escape(t.status)}</span></div>
-    <div class="progress"><span style="width:${Math.max(0, Math.min(100, t.progress))}%"></span></div>
-    <p>${t.progress.toFixed(1)}% · ${size(t.downloaded)} / ${size(t.total)} · ↓ ${size(t.download_speed)}/s · ↑ ${size(t.upload_speed)}/s</p>
-    <p class="muted">${t.peers} peers · Seeds: ${t.seeds ?? "unavailable"} · ETA: ${t.eta_seconds == null ? "—" : `${Math.ceil(t.eta_seconds / 60)} min`} · Uploaded ${size(t.uploaded)}</p>
-    <p class="muted">${escape(t.primary_adapter_name)} · ${escape(t.binding_mode)}</p>
+          const progress = Math.max(0, Math.min(100, t.progress));
+          const files = (t.files || [])
+            .map((file) => {
+              const fileProgress = file.size ? Math.min(100, (file.downloaded / file.size) * 100) : 0;
+              return `<div class="torrent-file-row"><div><strong>${escape(file.path)}</strong><small>${size(file.downloaded)} / ${size(file.size)}</small></div><div class="file-progress"><span style="width:${fileProgress}%"></span></div><b>${fileProgress.toFixed(1)}%</b></div>`;
+            })
+            .join("");
+          return `<article class="download-card torrent-card">
+    <div class="torrent-card-head"><div><h3>${escape(t.name)}</h3><span class="badge downloading">${escape(t.status)}</span></div><strong>${progress.toFixed(1)}%</strong></div>
+    <div class="progress torrent-progress"><span style="width:${progress}%;${progress > 0 ? "min-width:4px" : ""}"></span></div>
+    <div class="torrent-metrics"><span><b>${size(t.downloaded)}</b> of ${size(t.total)}</span><span><b>↓ ${size(t.download_speed)}/s</b></span><span>↑ ${size(t.upload_speed)}/s</span><span>${t.peers} peers</span><span>ETA ${t.eta_seconds == null ? "—" : `${Math.ceil(t.eta_seconds / 60)} min`}</span></div>
+    <p class="muted">Seeds: ${t.seeds ?? "unavailable"} · Uploaded ${size(t.uploaded)}</p>
+    <p class="muted">${escape(t.primary_adapter_name || "No adapter selected")} · ${escape(t.binding_mode)}</p>
+    <h4 class="torrent-subtitle">Internet contribution</h4>
     <div class="torrent-interface-stats">${perInterface}</div>
+    <details class="torrent-details"><summary>${(t.files || []).length} selected torrent files</summary><div class="torrent-file-list">${files || '<p class="muted">File details are resolving…</p>'}</div></details>
     ${t.error ? `<p class="form-error">${escape(t.error)}</p>` : ""}
-    <button class="secondary" data-torrent-action="${t.status === "paused" ? "resume" : "pause"}" data-id="${escape(t.id)}">${t.status === "paused" ? "Resume / seed" : "Pause"}</button>
+    <div class="torrent-actions"><button class="secondary" data-torrent-action="${t.status === "paused" ? "resume" : "pause"}" data-id="${escape(t.id)}">${t.status === "paused" ? "Resume / seed" : "Pause"}</button></div>
     </article>`;
         })
         .join("")

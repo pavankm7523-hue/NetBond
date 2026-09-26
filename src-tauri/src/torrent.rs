@@ -20,6 +20,7 @@ pub struct TorrentFile {
     pub index: usize,
     pub path: String,
     pub size: u64,
+    pub downloaded: u64,
     pub selected: bool,
 }
 
@@ -59,6 +60,7 @@ pub struct TorrentSnapshot {
     pub progress: f64,
     pub peers: u32,
     pub seeds: Option<u32>,
+    pub files: Vec<TorrentFile>,
     pub primary_adapter_id: String,
     pub primary_adapter_name: String,
     pub interface_download_bytes: HashMap<String, u64>,
@@ -107,14 +109,12 @@ impl TorrentEngine {
         if adapters.is_empty() {
             return Err("Select at least one adapter".into());
         }
+        set_live_sources(adapters)?;
         let mut inner = self.inner.lock().await;
-        if let Some(session) = &inner.session {
-            let current = inner.bound.iter().map(|a| &a.local_ip).collect::<Vec<_>>();
-            let requested = adapters.iter().map(|a| &a.local_ip).collect::<Vec<_>>();
-            if current != requested {
-                return Err("Torrent engine is already using a different adapter selection. Restart NetBond to change it.".into());
-            }
-            return Ok(session.clone());
+        if inner.session.is_some() {
+            let session = inner.session.as_ref().unwrap().clone();
+            inner.bound = adapters.to_vec();
+            return Ok(session);
         }
         let mut opts = SessionOptions::default();
         opts.bind_device_name = Some(
@@ -148,15 +148,8 @@ impl TorrentEngine {
         // may use the normal Windows route when the user has not selected a
         // source adapter yet.
         let mut session_options = SessionOptions::default();
-        if !adapters.is_empty() {
-            session_options.bind_device_name = Some(
-                adapters
-                    .iter()
-                    .map(|a| a.local_ip.as_str())
-                    .collect::<Vec<_>>()
-                    .join(";"),
-            );
-        }
+        // Metadata lookup uses the normal Windows route. The source-bound
+        // pool is applied only when the user starts downloading.
         session_options.listen = None;
         session_options.ipv4_only = true;
         session_options.disable_local_service_discovery = true;
@@ -183,6 +176,7 @@ impl TorrentEngine {
                 index,
                 path: f.filename.to_pathbuf().to_string_lossy().into_owned(),
                 size: f.len,
+                downloaded: 0,
                 selected: !f.attrs().padding,
             })
             .collect::<Vec<_>>();
@@ -226,6 +220,7 @@ impl TorrentEngine {
             .await?;
         let mut opts = AddTorrentOptions::default();
         opts.output_folder = Some(request.destination_dir);
+        let selected_files = request.selected_files.clone();
         opts.only_files = Some(request.selected_files);
         opts.peer_limit = Some(request.peer_limit.clamp(1, 500));
         opts.overwrite = false;
@@ -238,6 +233,23 @@ impl TorrentEngine {
             .await
             .map_err(|e| format!("Could not add torrent: {e:#}"))?;
         let handle = response.into_handle().ok_or("Torrent was not added")?;
+        let files = handle
+            .with_metadata(|metadata| {
+                metadata
+                    .info
+                    .iter_file_details()
+                    .enumerate()
+                    .filter(|(index, _)| selected_files.contains(index))
+                    .map(|(index, file)| TorrentFile {
+                        index,
+                        path: file.filename.to_pathbuf().to_string_lossy().into_owned(),
+                        size: file.len,
+                        downloaded: 0,
+                        selected: true,
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
         let id = Uuid::new_v4().to_string();
         let total = handle.stats().total_bytes;
         let snapshot = TorrentSnapshot {
@@ -246,6 +258,7 @@ impl TorrentEngine {
             status: "initializing".into(), downloaded: 0, uploaded: 0, total,
             download_speed: 0, upload_speed: 0, eta_seconds: None, progress: 0.0,
             peers: 0, seeds: None, primary_adapter_id: adapter.id.clone(),
+            files,
             primary_adapter_name: adapters.iter().map(|a|a.name.as_str()).collect::<Vec<_>>().join(" + "),
             interface_download_bytes: adapters.iter().map(|a|(a.id.clone(),0)).collect(),
             interface_upload_bytes: adapters.iter().map(|a|(a.id.clone(),0)).collect(),
@@ -269,6 +282,25 @@ impl TorrentEngine {
             engine.poll(poll_id).await;
         });
         Ok(id)
+    }
+
+    pub async fn update_adapters(&self, adapters: Vec<SelectedAdapter>) -> Result<(), String> {
+        set_live_sources(&adapters)?;
+        let mut inner = self.inner.lock().await;
+        inner.bound = adapters.clone();
+        let names = adapters
+            .iter()
+            .map(|adapter| adapter.name.as_str())
+            .collect::<Vec<_>>()
+            .join(" + ");
+        for record in inner.torrents.values_mut() {
+            record.snapshot.primary_adapter_name = names.clone();
+            record.snapshot.binding_mode = format!(
+                "New peer connections distributed across {} selected adapters with Windows interface routing.",
+                adapters.len()
+            );
+        }
+        Ok(())
     }
 
     pub async fn pause(&self, id: &str) -> Result<(), String> {
@@ -414,6 +446,14 @@ impl TorrentEngine {
                     .as_ref()
                     .map(|l| l.snapshot.peer_stats.live)
                     .unwrap_or(0);
+                for file in &mut snapshot.files {
+                    file.downloaded = stats
+                        .file_progress
+                        .get(file.index)
+                        .copied()
+                        .unwrap_or(0)
+                        .min(file.size);
+                }
                 snapshot.error = stats.error;
                 snapshot.interface_download_bytes = interface_download;
                 snapshot.interface_upload_bytes = interface_upload;
@@ -446,6 +486,20 @@ async fn make_add(source: &str) -> Result<AddTorrent<'static>, String> {
             .map_err(|e| format!("Cannot read .torrent file: {e}"))?;
         Ok(AddTorrent::from_bytes(bytes))
     }
+}
+
+fn set_live_sources(adapters: &[SelectedAdapter]) -> Result<(), String> {
+    let sources = adapters
+        .iter()
+        .map(|adapter| {
+            adapter
+                .local_ip
+                .parse()
+                .map_err(|_| format!("Invalid adapter address: {}", adapter.local_ip))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    netbond_route::set_selected_sources(sources);
+    Ok(())
 }
 fn validate_source(source: &str) -> Result<(), String> {
     if source.starts_with("magnet:?") {

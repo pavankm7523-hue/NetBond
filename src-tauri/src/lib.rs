@@ -98,6 +98,14 @@ async fn list_torrents(state: State<'_, AppState>) -> Result<Vec<TorrentSnapshot
     Ok(state.torrents.list().await)
 }
 
+#[tauri::command]
+async fn update_torrent_adapters(
+    adapters: Vec<models::SelectedAdapter>,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    state.torrents.update_adapters(adapters).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -166,7 +174,8 @@ pub fn run() {
             start_torrent,
             pause_torrent,
             resume_torrent,
-            list_torrents
+            list_torrents,
+            update_torrent_adapters
         ])
         .run(tauri::generate_context!())
         .expect("error while running NetBond");

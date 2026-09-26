@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.5 — 2026-09-26
+
+- Make torrent percentage and progress prominent and add expandable per-file progress.
+- Show downloaded bytes, live speed, and percentage contribution for each Internet adapter.
+- Recognize USB NCM phone tethering as `USB tether`.
+- Apply adapter selection changes to the live peer-source pool so new peer connections can use newly connected interfaces.
+
 ## 0.1.4 — 2026-09-26
 
 - Allow rqbit's dual-stack UDP tracker client to fall back to an IPv4 socket when selected Windows adapters have IPv4 source addresses only.

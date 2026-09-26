@@ -63,6 +63,16 @@ impl BindDevice {
     #[cfg(windows)]
     pub fn next_source(&self, is_v6: bool) -> crate::Result<IpAddr> {
         let start = self.next.fetch_add(1, Ordering::Relaxed);
+        let live_sources = netbond_route::current_selected_sources();
+        if let Some(sources) = live_sources.as_ref() {
+            for offset in 0..sources.len() {
+                let ip = sources[(start + offset) % sources.len()];
+                if ip.is_ipv6() == is_v6 && netbond_route::is_online(ip) {
+                    return Ok(ip);
+                }
+            }
+            return Err(Error::BindDeviceInvalid);
+        }
         for offset in 0..self.sources.len() {
             let ip = self.sources[(start + offset) % self.sources.len()].0;
             if ip.is_ipv6() == is_v6 && netbond_route::is_online(ip) {

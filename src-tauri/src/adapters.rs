@@ -100,6 +100,8 @@ ConvertTo-Json -InputObject $items -Compress -Depth 5
                     AdapterKind::Wifi
                 } else if hay.contains("usb")
                     && (hay.contains("rndis")
+                        || hay.contains("ncm")
+                        || hay.contains("host device")
                         || hay.contains("tether")
                         || hay.contains("remote ndis"))
                 {
