@@ -462,3 +462,32 @@ fn validate_source(source: &str) -> Result<(), String> {
         Err("Choose a .torrent file or enter a magnet URI".into())
     }
 }
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn ipv4_selected_adapters_initialize_torrent_udp_clients() {
+        let adapters = crate::adapters::enumerate()
+            .unwrap()
+            .into_iter()
+            .filter(|adapter| adapter.connected)
+            .filter_map(|adapter| adapter.ipv4.first().cloned())
+            .collect::<Vec<_>>();
+        if adapters.is_empty() {
+            return;
+        }
+
+        let temp = tempfile::tempdir().unwrap();
+        let mut options = SessionOptions::default();
+        options.bind_device_name = Some(adapters.join(";"));
+        options.listen = None;
+        options.ipv4_only = true;
+        options.disable_local_service_discovery = true;
+
+        Session::new_with_opts(temp.path().to_path_buf(), options)
+            .await
+            .expect("IPv4-only selected adapters should initialize UDP tracker and DHT clients");
+    }
+}

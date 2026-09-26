@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4 — 2026-09-26
+
+- Allow rqbit's dual-stack UDP tracker client to fall back to an IPv4 socket when selected Windows adapters have IPv4 source addresses only.
+
 ## 0.1.3 — 2026-09-26
 
 - Hide Windows tunnel, WAN miniport, hotspot-internal, kernel-debug, and other ghost interfaces from the Network dashboard.

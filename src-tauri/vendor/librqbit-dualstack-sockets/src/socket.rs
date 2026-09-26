@@ -88,7 +88,16 @@ impl MaybeDualstackSocket<Socket> {
         #[cfg(windows)]
         let selected = opts
             .device
-            .map(|bd| bd.next_source(addr.is_ipv6()))
+            .map(|bd| match bd.next_source(addr.is_ipv6()) {
+                Ok(source) => Ok(source),
+                // rqbit's UDP tracker client requests a dual-stack [::]
+                // socket even when the session is explicitly IPv4-only. A
+                // NetBond selection commonly contains IPv4 sources only, so
+                // fall back to an IPv4 UDP socket instead of rejecting the
+                // otherwise valid selected interfaces.
+                Err(_) if is_udp && addr.is_ipv6() => bd.next_source(false),
+                Err(error) => Err(error),
+            })
             .transpose()?;
         #[cfg(windows)]
         let addr = selected
