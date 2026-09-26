@@ -29,7 +29,7 @@ pub struct TorrentPreview {
     pub info_hash: String,
     pub total_size: u64,
     pub files: Vec<TorrentFile>,
-    pub primary_adapter: SelectedAdapter,
+    pub primary_adapter: Option<SelectedAdapter>,
     pub binding_mode: String,
 }
 
@@ -143,11 +143,28 @@ impl TorrentEngine {
         adapters: Vec<SelectedAdapter>,
     ) -> Result<TorrentPreview, String> {
         validate_source(&source)?;
-        let adapter = adapters
-            .first()
-            .cloned()
-            .ok_or("Select at least one adapter")?;
-        let session = self.session(Path::new(&destination), &adapters).await?;
+        // Metadata inspection must not create or lock the long-lived download
+        // session. A local .torrent can be inspected offline, while a magnet
+        // may use the normal Windows route when the user has not selected a
+        // source adapter yet.
+        let mut session_options = SessionOptions::default();
+        if !adapters.is_empty() {
+            session_options.bind_device_name = Some(
+                adapters
+                    .iter()
+                    .map(|a| a.local_ip.as_str())
+                    .collect::<Vec<_>>()
+                    .join(";"),
+            );
+        }
+        session_options.listen = None;
+        session_options.ipv4_only = true;
+        session_options.disable_local_service_discovery = true;
+        session_options.client_name_and_version =
+            Some(format!("NetBond/0.1 rqbit/{}", librqbit::version()));
+        let session = Session::new_with_opts(PathBuf::from(&destination), session_options)
+            .await
+            .map_err(|e| format!("Could not initialize torrent metadata reader: {e:#}"))?;
         let mut opts = AddTorrentOptions::default();
         opts.list_only = true;
         opts.output_folder = Some(destination);
@@ -179,11 +196,16 @@ impl TorrentEngine {
             info_hash: list.info_hash.as_string(),
             total_size,
             files,
-            primary_adapter: adapter,
-            binding_mode: format!(
-                "Peer connections distributed across {} selected adapters.",
-                adapters.len()
-            ),
+            primary_adapter: adapters.first().cloned(),
+            binding_mode: if adapters.is_empty() {
+                "Metadata reviewed using the normal Windows network route. Select adapters before downloading."
+                    .into()
+            } else {
+                format!(
+                    "Metadata reviewed through {} selected adapter(s).",
+                    adapters.len()
+                )
+            },
         })
     }
 

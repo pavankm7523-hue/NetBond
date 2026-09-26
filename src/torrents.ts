@@ -112,7 +112,7 @@ export function setupTorrents(getAdapters: () => Adapter[], getFolder: () => str
         <div class="torrent-files">${p.files.map((f) => `<label class="check"><input type="checkbox" data-torrent-file="${f.index}" ${f.selected ? "checked" : ""}><span>${escape(f.path)}</span><small>${size(f.size)}</small></label>`).join("")}</div>
         <div class="settings-grid"><label>Upload limit (KiB/s, 0 = unlimited)<input id="torrent-upload" type="number" value="256" min="0" max="1000000"></label><label>Maximum peers<input id="torrent-peers" type="number" value="80" min="1" max="500"></label></div>
         <label class="check"><input id="torrent-seed" type="checkbox"> Continue seeding after download completes</label>
-        <p class="muted">Save to ${escape(previewFolder)}</p><button id="torrent-start" class="primary">Download selected files</button>`;
+        <p class="muted">${escape(p.binding_mode)}</p><p class="muted">Save to ${escape(previewFolder)}</p><button id="torrent-start" class="primary">Download selected files</button>`;
         document.querySelector("#torrent-start")!.addEventListener("click", async (event) => {
           const start = event.currentTarget as HTMLButtonElement;
           start.disabled = true;
@@ -122,6 +122,15 @@ export function setupTorrents(getAdapters: () => Adapter[], getFolder: () => str
               metadata.querySelectorAll<HTMLInputElement>("[data-torrent-file]:checked"),
             ).map((f) => Number(f.dataset.torrentFile));
             if (!files.length) throw new Error("Select at least one file.");
+            // Refresh the selection at start time. Reviewing metadata is
+            // intentionally allowed before the user chooses an interface.
+            previewAdapters = getAdapters().map((a) => ({
+              id: a.id,
+              name: a.name,
+              local_ip: a.ipv4[0],
+            }));
+            if (!previewAdapters.length)
+              throw new Error("Select at least one connected adapter on the Network page.");
             await invoke("start_torrent", {
               request: {
                 source: previewSource,

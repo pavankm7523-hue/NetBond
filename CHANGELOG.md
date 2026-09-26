@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 — 2026-09-26
+
+- Allow `.torrent` and magnet metadata review before selecting a download adapter.
+- Keep metadata inspection separate from the long-lived, source-bound torrent session.
+- Refresh and validate the selected adapters when the torrent download actually starts.
+
 ## 0.1.0 — 2026-09-25
 
 - Initial public Windows release.
